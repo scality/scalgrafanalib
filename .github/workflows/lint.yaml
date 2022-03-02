@@ -1,0 +1,23 @@
+name: Lint
+
+on: [push]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .[dev]
+      - name: Format with black
+        run: black --diff --check $(git ls-files '*.py')
+      - name: Lint with pylint
+        run: pylint --disable=all --enable=unused-import $(git ls-files '*.py')
+      - name: Check types with mypy
+        run: mypy $(git ls-files '*.py')
