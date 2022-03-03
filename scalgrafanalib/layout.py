@@ -1,4 +1,3 @@
-from operator import floordiv
 from typing import List, Union
 import attr
 from grafanalib.core import GridPos, Panel, RowPanel  # type: ignore
@@ -29,32 +28,36 @@ def get_width(panel: Panel) -> int:
     return panel.gridPos.w
 
 
-def row(panels: PanelList, h: int, w: int = 0) -> PanelRow:
+def row(panels: PanelList, height: int, width: int = 0) -> PanelRow:
     """Resize panels so they are evenly spaced."""
-    if w == 0:
+    if width == 0:
         alloted_widths = list(filter(None, [get_width(panel) for panel in panels]))
-        w = floordiv(24 - sum(alloted_widths), len(panels) - len(alloted_widths) or 1)
+        width = (GRID_WIDTH - sum(alloted_widths)) // (
+            len(panels) - len(alloted_widths) or 1
+        )
     res = []
     pos = 0
     for panel in panels:
         assert isinstance(panel, Panel)
         assert not isinstance(panel, RowPanel)
-        width = get_width(panel) or w
-        res += [attr.evolve(panel, gridPos=GridPos(x=pos, y=0, h=h, w=width))]
-        pos += width
+        grid_pos = GridPos(
+            x=pos, y=0, h=get_height(panel) or height, w=get_width(panel) or width
+        )
+        res += [attr.evolve(panel, gridPos=grid_pos)]
+        pos += grid_pos.w
     return res
 
 
-def column(panels: PanelColumn, h: int = 0) -> PanelList:
+def column(panels: PanelColumn, height: int = 0) -> PanelList:
     """Position panels/rows on top of each other, optionally setting the height"""
     res = []
     pos = 0
-    for row in panels:
+    for row in panels:  # pylint: disable=redefined-outer-name
         if isinstance(row, list):
             max_height = 0
             for panel in row:
                 assert isinstance(panel, Panel)
-                height = get_height(panel) or h
+                height = get_height(panel) or height
                 res += [
                     attr.evolve(
                         panel, gridPos=attr.evolve(panel.gridPos, y=pos, h=height)
@@ -64,22 +67,22 @@ def column(panels: PanelColumn, h: int = 0) -> PanelList:
             pos += max_height
         else:
             assert isinstance(row, Panel)
-            height = get_height(row) or h
+            height = get_height(row) or height
             width = get_width(row) or GRID_WIDTH
             res += [attr.evolve(row, gridPos=GridPos(x=0, y=pos, w=width, h=height))]
             pos += height
     return res
 
 
-def resize(panels: PanelList, h: int = 0, w: int = 0) -> PanelList:
+def resize(panels: PanelList, height: int = 0, width: int = 0) -> PanelList:
     return [
         attr.evolve(
             panel,
             gridPos=GridPos(
                 x=0,
                 y=0,
-                h=h if h else get_height(panel),
-                w=w if w else get_width(panel),
+                h=height if height else get_height(panel),
+                w=width if width else get_width(panel),
             ),
         )
         for panel in panels

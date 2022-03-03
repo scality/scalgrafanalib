@@ -7,7 +7,8 @@ def local_file(name: str) -> str:
 
 
 README = local_file("README.md")
-
+with open(README, encoding="utf-8") as f:
+    DESCRIPTION = f.read()
 
 setup(
     name="scalgrafanalib",
@@ -16,7 +17,7 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version="1.0.0",
     description="Library for building Grafana dashboards at scality",
-    long_description=open(README).read(),
+    long_description=DESCRIPTION,
     url="https://github.com/scality/scalgrafanalib",
     project_urls={
         "Source": "https://github.com/scality/scalgrafanalib",

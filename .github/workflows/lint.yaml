@@ -18,6 +18,6 @@ jobs:
       - name: Format with black
         run: black --diff --check $(git ls-files '*.py')
       - name: Lint with pylint
-        run: pylint --disable=all --enable=unused-import $(git ls-files '*.py')
+        run: pylint --disable=C0114,C0116,R0903 scalgrafanalib setup.py
       - name: Check types with mypy
         run: mypy $(git ls-files '*.py')

@@ -1,16 +1,18 @@
-import attr
 from typing import Any, Dict, TypeVar
+import attr
 from grafanalib import core  # type: ignore
 
 Json = Dict[str, Any]
 Self = TypeVar("Self")
 
-# SimpleTooltip : simple, "modern" tooltip configuration
-# Inherit from Tooltip to allow using in place of "usual" tooltip class
+
 @attr.s
 class Tooltip(core.Tooltip):
+    """SimpleTooltip : simple, "modern" tooltip configuration
+    Inherit from Tooltip to allow using in place of "usual" tooltip class"""
+
     show: bool = attr.ib(default=True, validator=attr.validators.instance_of(bool))
-    showHistogram: bool = attr.ib(
+    showHistogram: bool = attr.ib(  # pylint: disable=invalid-name
         default=True, validator=attr.validators.instance_of(bool)
     )
 
@@ -18,16 +20,18 @@ class Tooltip(core.Tooltip):
         return {"show": self.show, "showHistogram": self.showHistogram}
 
 
-# Target: set default `intervalFactor` mode to 1
 class Target(core.Target):
+    """Target: set default `intervalFactor` mode to 1"""
+
     def to_json_data(self) -> Json:
         self.intervalFactor = 1
         return super().to_json_data()
 
 
-# TimeSeries: Allow settings decimals
 @attr.s
 class TimeSeries(core.TimeSeries):
+    """TimeSeries: Allow settings decimals"""
+
     decimals: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
 
     def to_json_data(self) -> Json:
@@ -37,17 +41,17 @@ class TimeSeries(core.TimeSeries):
         return json
 
 
-# Dashboard: extension to make the dashboard a bit less verbose
+def _simplify(json: Json) -> Json:
+    return {key: value for key, value in json.items() if value is not None}
+
+
 class Dashboard(core.Dashboard):
-    def __simplify(self, json: Json) -> Json:
-        return dict(filter(lambda item: item[1] != None, json.items()))
+    """Dashboard: extension to make the dashboard a bit less verbose"""
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
         # Remove 'null' values from panels
-        json["panels"] = [
-            self.__simplify(panel.to_json_data()) for panel in json["panels"]
-        ]
+        json["panels"] = [_simplify(panel.to_json_data()) for panel in json["panels"]]
         # But do not remove null values from dashboard itself, this would fields
         # we kind of use (uid)
         return json
@@ -60,7 +64,7 @@ class Dashboard(core.Dashboard):
         }
         for panel in self.panels:
             if isinstance(panel, core.RowPanel):
-                assert panel.dataSource == None
+                assert panel.dataSource is None
             else:
                 assert panel.dataSource in datasources
         return self
