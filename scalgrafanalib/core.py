@@ -1,9 +1,24 @@
-from typing import Any, Dict, TypeVar
+from typing import Any, Dict, List, TypeVar
 import attr
 from grafanalib import core  # type: ignore
 
 Json = Dict[str, Any]
 Self = TypeVar("Self")
+
+
+@attr.s
+class PieChart(core.PieChartv2):
+    """PieChart: Allow settings displayLabels"""
+
+    displayLabels: List[str] = attr.ib(  # pylint: disable=invalid-name
+        default=[], validator=attr.validators.instance_of(list)
+    )
+
+    def to_json_data(self) -> Json:
+        json = super().to_json_data()
+        if self.displayLabels:
+            json["options"]["displayLabels"] = self.displayLabels
+        return json
 
 
 @attr.s
