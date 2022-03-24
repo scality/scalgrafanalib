@@ -7,6 +7,19 @@ Self = TypeVar("Self")
 
 
 @attr.s
+class BarGauge(core.BarGauge):
+    """BarGauge: Allow settings noValue"""
+
+    noValue: str = attr.ib(default=None)
+
+    def to_json_data(self) -> Json:
+        json = super().to_json_data()
+        if self.noValue:
+            json["options"]["fieldOptions"]["defaults"]["noValue"] = self.noValue
+        return json
+
+
+@attr.s
 class PieChart(core.PieChartv2):
     """PieChart: Allow settings displayLabels"""
 
