@@ -10,7 +10,7 @@ Self = TypeVar("Self")
 class BarGauge(core.BarGauge):
     """BarGauge: Allow settings noValue"""
 
-    noValue: str = attr.ib(default=None)
+    noValue: str = attr.ib(default=None)  # pylint: disable=invalid-name
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
@@ -58,14 +58,19 @@ class Target(core.Target):
 
 @attr.s
 class TimeSeries(core.TimeSeries):
-    """TimeSeries: Allow settings decimals"""
+    """TimeSeries: Allow settings decimals & legend values"""
 
     decimals: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
+    legendValues: List[str] = attr.ib(  # pylint: disable=invalid-name
+        default=[], validator=attr.validators.instance_of(list)
+    )
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
         if self.decimals:
             json["options"]["decimals"] = self.decimals
+        if self.legendValues:
+            json["options"]["legend"]["calcs"] = self.legendValues
         return json
 
 
