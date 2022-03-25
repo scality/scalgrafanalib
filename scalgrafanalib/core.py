@@ -10,7 +10,7 @@ Self = TypeVar("Self")
 class BarGauge(core.BarGauge):
     """BarGauge: Allow settings noValue"""
 
-    noValue: str = attr.ib(default=None)
+    noValue: str = attr.ib(default=None)  # pylint: disable=invalid-name
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
