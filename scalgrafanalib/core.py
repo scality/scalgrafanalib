@@ -7,6 +7,19 @@ Self = TypeVar("Self")
 
 
 @attr.s
+class GaugePanel(core.GaugePanel):
+    """GaugePanel: Allow settings noValue"""
+
+    noValue: str = attr.ib(default=None)  # pylint: disable=invalid-name
+
+    def to_json_data(self) -> Json:
+        json = super().to_json_data()
+        if self.noValue:
+            json["options"]["fieldOptions"]["defaults"]["noValue"] = self.noValue
+        return json
+
+
+@attr.s
 class BarGauge(core.BarGauge):
     """BarGauge: Allow settings noValue"""
 
