@@ -45,7 +45,7 @@ setup(
     ],
     extras_require={
         "dev": [
-            "black==22.1.0",
+            "black==22.3.0",
             "mypy==0.931",
             "pylint==2.12.2",
             "types-setuptools",
