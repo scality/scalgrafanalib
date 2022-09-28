@@ -33,6 +33,14 @@ class Metric:
         self.default_labels += self.parse_matchers(*args, **kwargs)
         return self
 
+    def with_description(self, desc: str) -> "Metric":
+        self.description = desc
+        return self
+
+    def with_unit(self, unit: str) -> "Metric":
+        self.unit = unit
+        return self
+
     def __call__(self, *args: str, **kwargs: str) -> str:
         selector = ", ".join(
             [*self.default_labels, *self.parse_matchers(*args, **kwargs)]
@@ -55,6 +63,15 @@ class BucketMetric:
         self.description: typing.Optional[str] = None
         self.unit: typing.Optional[str] = None
 
-    def withDefaults(self, *args: str, **kwargs: str) -> "BucketMetric":
-        for m in [self.bucket, self.count, self.sum]:
-            m.withDefaults(*args, *kwargs)
+    def with_defaults(self, *args: str, **kwargs: str) -> "BucketMetric":
+        for metric in [self.bucket, self.count, self.sum]:
+            metric.with_defaults(*args, *kwargs)
+        return self
+
+    def with_description(self, desc: str) -> "BucketMetric":
+        self.description = desc
+        return self
+
+    def with_unit(self, unit: str) -> "BucketMetric":
+        self.unit = unit
+        return self
