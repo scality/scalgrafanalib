@@ -36,32 +36,32 @@ class Metric(MetricMetadata):
         self.labels = [*labels, *kwargs.keys()]
         self.default_labels = self.parse_matchers(**kwargs)
 
-    def is_valid_label(self, label: str) -> bool:
-        return not self.labels or label in self.labels
+    def check_label(self, label: str) -> str:
+        """Return the label if valid"""
+        if self.labels and label not in self.labels:
+            raise ValueError(f"Invalid label `{label}` for {self.name}")
+        return label
 
-    def is_valid_matcher(self, matcher: str) -> bool:
-        match = re.fullmatch('^\\s*([A-Za-z_-]+)\\s*(=|!=|=~|!~)\\s*".*"\\s*$', matcher)
-        return match is not None and self.is_valid_label(match.group(1))
+    def extract_label(self, expr: str) -> str:
+        """Return the label of the matcher, if valid"""
+        match = self.LABEL_EXPR.fullmatch(expr)
+        if match is None:
+            raise ValueError(f"Invalid matcher `{expr}` for {self.name}")
+        return self.check_label(match.group(1))
 
-    def parse_matchers(self, *args: str, **kwargs: str) -> typing.List[str]:
-        for arg in args:
-            assert self.is_valid_matcher(
-                arg
-            ), f"Invalid matcher `{arg}` for {self.name}"
-        for kwarg in kwargs:
-            assert self.is_valid_label(
-                kwarg
-            ), f"Invalid label `{kwarg}` for {self.name}"
-        return [*args, *[k + '="' + str(v) + '"' for k, v in kwargs.items()]]
+    def parse_matchers(self, *args: str, **kwargs: str) -> typing.Dict[str, str]:
+        return {self.extract_label(arg): arg for arg in args} | {
+            self.check_label(label): f'{label}="{expr}"'
+            for label, expr in kwargs.items()
+        }
 
     def with_defaults(self: TMetric, *args: str, **kwargs: str) -> TMetric:
-        self.default_labels += self.parse_matchers(*args, **kwargs)
+        self.default_labels |= self.parse_matchers(*args, **kwargs)
         return self
 
     def __call__(self, *args: str, **kwargs: str) -> str:
-        selector = ", ".join(
-            [*self.default_labels, *self.parse_matchers(*args, **kwargs)]
-        )
+        matchers = self.default_labels | self.parse_matchers(*args, **kwargs)
+        selector = ", ".join([expr for _, expr in matchers.items()])
         return self.name + "{" + selector + "}"
 
 
