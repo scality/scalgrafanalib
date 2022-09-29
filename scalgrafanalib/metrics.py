@@ -1,15 +1,40 @@
 import re
 import typing
 
-class Metric:
+TMetricMetadata = typing.TypeVar(  # pylint: disable=invalid-name
+    "TMetricMetadata", bound="MetricMetadata"
+)
+
+
+class MetricMetadata:
+    """Base class for storing metric-related metadata"""
+
+    def __init__(self):
+        self.description: typing.Optional[str] = None
+        self.unit: typing.Optional[str] = None
+
+    def with_description(self: TMetricMetadata, desc: str) -> TMetricMetadata:
+        self.description = desc
+        return self
+
+    def with_unit(self: TMetricMetadata, unit: str) -> TMetricMetadata:
+        self.unit = unit
+        return self
+
+
+TMetric = typing.TypeVar("TMetric", bound="Metric")  # pylint: disable=invalid-name
+
+
+class Metric(MetricMetadata):
     """Base class for prometheus metric, allowing to statically validate the labels"""
 
+    LABEL_EXPR = re.compile('^\\s*([A-Za-z_-]+)\\s*(=|!=|=~|!~)\\s*".*"\\s*$')
+
     def __init__(self, name: str, *labels: str, **kwargs: str) -> None:
+        super().__init__()
         self.name = name
         self.labels = [*labels, *kwargs.keys()]
         self.default_labels = self.parse_matchers(**kwargs)
-        self.description: typing.Optional[str] = None
-        self.unit: typing.Optional[str] = None
 
     def is_valid_label(self, label: str) -> bool:
         return not self.labels or label in self.labels
@@ -29,16 +54,8 @@ class Metric:
             ), f"Invalid label `{kwarg}` for {self.name}"
         return [*args, *[k + '="' + str(v) + '"' for k, v in kwargs.items()]]
 
-    def with_defaults(self, *args: str, **kwargs: str) -> "Metric":
+    def with_defaults(self: TMetric, *args: str, **kwargs: str) -> TMetric:
         self.default_labels += self.parse_matchers(*args, **kwargs)
-        return self
-
-    def with_description(self, desc: str) -> "Metric":
-        self.description = desc
-        return self
-
-    def with_unit(self, unit: str) -> "Metric":
-        self.unit = unit
         return self
 
     def __call__(self, *args: str, **kwargs: str) -> str:
@@ -49,29 +66,25 @@ class Metric:
 
 
 class CounterMetric(Metric):
-    def __call__(self, *args: str, **kwds: str) -> str:
-        return super().__call__(*args, **kwds) + '[$__rate_interval]'
+    """Class for prometheus counter metric"""
+
+    def __call__(self, *args: str, **kwargs: str) -> str:
+        return self.raw(*args, **kwargs) + "[$__rate_interval]"
+
+    def raw(self, *args: str, **kwargs: str) -> str:
+        return super().__call__(*args, **kwargs)
 
 
-class BucketMetric:
+class BucketMetric(MetricMetadata):
     """Class for prometheus bucket metric"""
 
     def __init__(self, name: str, *labels: str, **kwargs: str) -> None:
+        super().__init__()
         self.bucket = CounterMetric(name + "_bucket", "le", *labels, **kwargs)
         self.count = CounterMetric(name + "_count", *labels, **kwargs)
         self.sum = CounterMetric(name + "_sum", *labels, **kwargs)
-        self.description: typing.Optional[str] = None
-        self.unit: typing.Optional[str] = None
 
     def with_defaults(self, *args: str, **kwargs: str) -> "BucketMetric":
         for metric in [self.bucket, self.count, self.sum]:
             metric.with_defaults(*args, *kwargs)
-        return self
-
-    def with_description(self, desc: str) -> "BucketMetric":
-        self.description = desc
-        return self
-
-    def with_unit(self, unit: str) -> "BucketMetric":
-        self.unit = unit
         return self
