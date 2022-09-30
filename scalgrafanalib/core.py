@@ -15,7 +15,9 @@ class GaugePanel(core.GaugePanel):
     def to_json_data(self) -> Json:
         json = super().to_json_data()
         if self.noValue:
-            json["options"]["fieldOptions"]["defaults"]["noValue"] = self.noValue
+            json["fieldConfig"]["defaults"]["noValue"] = self.noValue
+        if self.calc:
+            json["options"] = {"reduceOptions": {"calcs": [self.calc]}}
         return json
 
 

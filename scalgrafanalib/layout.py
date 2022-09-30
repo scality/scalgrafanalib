@@ -5,27 +5,54 @@ from grafanalib.core import GridPos, Panel, RowPanel  # type: ignore
 PanelList = List[Panel]
 PanelRow = PanelList
 PanelColumn = List[Union[Panel, PanelRow]]
+PanelOrList = Union[Panel, PanelList]
 
 ROW_HEIGHT = 1  # height of a 'row' panel
 GRID_WIDTH = 24  # Width of the Grafana layout grid
 
 
-def get_height(panel: Panel) -> int:
+def get_x(panel: Panel) -> int:
+    return panel.gridPos.x if panel.gridPos is not None else 0
+
+
+def get_y(panel: Panel) -> int:
+    return panel.gridPos.y if panel.gridPos is not None else 0
+
+
+def get_height(panel: PanelOrList) -> int:
     """Return the height of the panel"""
     if isinstance(panel, RowPanel):
         return ROW_HEIGHT
+    if isinstance(panel, list):
+        return max([get_y(p) + get_height(p) for p in panel])
     if panel.gridPos is None:
         return 0  # unknown height
     return panel.gridPos.h
 
 
-def get_width(panel: Panel) -> int:
+def get_width(panel: PanelOrList) -> int:
     """Return the width of the panel"""
     if isinstance(panel, RowPanel):
         return GRID_WIDTH
+    if isinstance(panel, list):
+        return max([get_x(p) + get_width(p) for p in panel])
     if panel.gridPos is None:
         return 0  # unknown width
     return panel.gridPos.w
+
+
+def reposition(
+    panel: Panel, offset_x: int = 0, offset_y: int = 0, height: int = 0, width: int = 0
+) -> Panel:
+    if isinstance(panel, RowPanel):
+        assert offset_x == 0  # cannot move a RowPanel laterally!
+    grid_pos = GridPos(
+        x=offset_x + get_x(panel),
+        y=offset_y + get_y(panel),
+        h=get_height(panel) or height,
+        w=get_width(panel) or width,
+    )
+    return attr.evolve(panel, gridPos=grid_pos)
 
 
 def row(panels: PanelList, height: int, width: int = 0) -> PanelRow:
@@ -38,39 +65,30 @@ def row(panels: PanelList, height: int, width: int = 0) -> PanelRow:
     res = []
     pos = 0
     for panel in panels:
-        assert isinstance(panel, Panel)
         assert not isinstance(panel, RowPanel)
-        grid_pos = GridPos(
-            x=pos, y=0, h=get_height(panel) or height, w=get_width(panel) or width
-        )
-        res += [attr.evolve(panel, gridPos=grid_pos)]
-        pos += grid_pos.w
+        if isinstance(panel, list):
+            res += [
+                reposition(p, offset_x=pos, height=height, width=width) for p in panel
+            ]
+        else:
+            assert isinstance(panel, Panel)
+            res += [reposition(panel, offset_x=pos, height=height, width=width)]
+        pos = get_width(res)
     return res
 
 
-def column(panels: PanelColumn, height: int = 0) -> PanelList:
+def column(panels: PanelColumn, height: int = 0, width: int = 0) -> PanelList:
     """Position panels/rows on top of each other, optionally setting the height"""
     res = []
     pos = 0
-    for row in panels:  # pylint: disable=redefined-outer-name
-        if isinstance(row, list):
-            max_height = 0
-            for panel in row:
-                assert isinstance(panel, Panel)
-                height = get_height(panel) or height
-                res += [
-                    attr.evolve(
-                        panel, gridPos=attr.evolve(panel.gridPos, y=pos, h=height)
-                    )
-                ]
-                max_height = max(height, max_height)
-            pos += max_height
+    for panel in panels:  # pylint: disable=redefined-outer-name
+        if isinstance(panel, list):
+            res += [
+                reposition(p, offset_y=pos, height=height, width=width) for p in panel
+            ]
         else:
-            assert isinstance(row, Panel)
-            height = get_height(row) or height
-            width = get_width(row) or GRID_WIDTH
-            res += [attr.evolve(row, gridPos=GridPos(x=0, y=pos, w=width, h=height))]
-            pos += height
+            res += [reposition(panel, offset_y=pos, height=height, width=width)]
+        pos = get_height(res)
     return res
 
 
