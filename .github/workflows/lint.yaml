@@ -23,3 +23,5 @@ jobs:
         run: pylint --disable=C0114,C0116,R0903 scalgrafanalib setup.py
       - name: Check types with mypy
         run: mypy $(git ls-files '*.py')
+      - name: Run tests
+        run: pytest
