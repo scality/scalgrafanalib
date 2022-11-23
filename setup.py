@@ -48,6 +48,7 @@ setup(
             "black==22.3.0",
             "mypy==0.931",
             "pylint==2.12.2",
+            "pytest==7.1.3",
             "types-setuptools",
         ],
     },
