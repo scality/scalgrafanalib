@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, TypeVar
+from typing import Any, Dict, List, TypeVar, Union
 import attr
 from grafanalib import core  # type: ignore
 
@@ -94,6 +94,9 @@ class TimeSeries(core.TimeSeries):
     decimals: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
     legendValues: List[str] = attr.ib(  # pylint: disable=invalid-name
         default=[], validator=attr.validators.instance_of(list)
+    )
+    spanNulls: Union[int, bool] = attr.ib(  # pylint: disable=invalid-name
+        default=False, validator=attr.validators.instance_of((int, bool))
     )
 
     def to_json_data(self) -> Json:
