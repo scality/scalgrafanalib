@@ -41,13 +41,14 @@ setup(
     ],
     install_requires=[
         "attrs>=15.2.0",
-        "grafanalib>=0.6.1",
+        "grafanalib==0.6.3",
     ],
     extras_require={
         "dev": [
             "black==22.3.0",
             "mypy==0.931",
             "pylint==2.12.2",
+            "pytest==7.1.3",
             "types-setuptools",
         ],
     },
