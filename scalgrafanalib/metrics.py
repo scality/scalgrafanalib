@@ -28,7 +28,9 @@ TMetric = typing.TypeVar("TMetric", bound="Metric")  # pylint: disable=invalid-n
 class Metric(MetricMetadata):
     """Base class for prometheus metric, allowing to statically validate the labels"""
 
-    LABEL_EXPR = re.compile('^\\s*([A-Za-z_-]+)\\s*(=|!=|=~|!~)\\s*".*"\\s*$')
+    LABEL_EXPR = re.compile(
+        '^\\s*([a-zA-Z_:][a-zA-Z0-9_:]*)\\s*(=|!=|=~|!~)\\s*".*"\\s*$'
+    )
 
     def __init__(self, name: str, *labels: str, **kwargs: str) -> None:
         super().__init__()
