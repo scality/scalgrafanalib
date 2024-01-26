@@ -100,6 +100,22 @@ class StatSpecialMapping:
 
 
 @attr.s
+class StateTimeline(core.StateTimeline):
+    """StateTimeline: Allow settings minValue and maxValue"""
+
+    minValue = attr.ib(default=None)  # pylint: disable=invalid-name
+    maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
+
+    def to_json_data(self) -> Json:
+        json = super().to_json_data()
+        if self.minValue:
+            json["fieldConfig"]["defaults"]["min"] = self.minValue
+        if self.maxValue:
+            json["fieldConfig"]["defaults"]["max"] = self.maxValue
+        return json
+
+
+@attr.s
 class Tooltip(core.Tooltip):
     """SimpleTooltip : simple, "modern" tooltip configuration
     Inherit from Tooltip to allow using in place of "usual" tooltip class"""
