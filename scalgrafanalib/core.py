@@ -66,6 +66,56 @@ class Stat(core.Stat):
 
 
 @attr.s
+class StatSpecialMapping:
+    """
+    Generates json structure for the special mappings for the StatPanel:
+
+    :param text: Sting that will replace input value
+    :param match: Special value to match, one of "nan", "null", "null+nan", "true", "false", "empty"
+    :param color: How to color the text if mapping occurs
+    :param index: index
+    """
+
+    text = attr.ib(default="", validator=attr.validators.instance_of(str))
+    match = attr.ib(
+        default="",
+        validator=attr.validators.in_(
+            ["nan", "null", "null+nan", "true", "false", "empty"]
+        ),
+    )
+    color = attr.ib(default="", validator=attr.validators.instance_of(str))
+    index = attr.ib(default=None)
+
+    def to_json_data(self):
+        return {
+            "type": "special",
+            "options": {
+                "match": self.match,
+                "result": {
+                    "text": self.text,
+                    "index": self.index,
+                },
+            },
+        }
+
+
+@attr.s
+class StateTimeline(core.StateTimeline):
+    """StateTimeline: Allow settings minValue and maxValue"""
+
+    minValue = attr.ib(default=None)  # pylint: disable=invalid-name
+    maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
+
+    def to_json_data(self) -> Json:
+        json = super().to_json_data()
+        if self.minValue:
+            json["fieldConfig"]["defaults"]["min"] = self.minValue
+        if self.maxValue:
+            json["fieldConfig"]["defaults"]["max"] = self.maxValue
+        return json
+
+
+@attr.s
 class Tooltip(core.Tooltip):
     """SimpleTooltip : simple, "modern" tooltip configuration
     Inherit from Tooltip to allow using in place of "usual" tooltip class"""

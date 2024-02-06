@@ -28,7 +28,9 @@ TMetric = typing.TypeVar("TMetric", bound="Metric")  # pylint: disable=invalid-n
 class Metric(MetricMetadata):
     """Base class for prometheus metric, allowing to statically validate the labels"""
 
-    LABEL_EXPR = re.compile('^\\s*([A-Za-z_-]+)\\s*(=|!=|=~|!~)\\s*".*"\\s*$')
+    LABEL_EXPR = re.compile(
+        '^\\s*([a-zA-Z_:][a-zA-Z0-9_:]*)\\s*(=|!=|=~|!~)\\s*".*"\\s*$'
+    )
 
     def __init__(self, name: str, *labels: str, **kwargs: str) -> None:
         super().__init__()
@@ -49,9 +51,18 @@ class Metric(MetricMetadata):
             raise ValueError(f"Invalid matcher `{expr}` for {self.name}")
         return self.check_label(match.group(1))
 
-    def parse_matchers(self, *args: str, **kwargs: str) -> typing.Dict[str, str]:
-        return {self.extract_label(arg): arg for arg in args} | {
-            self.check_label(label): f'{label}="{expr}"'
+    def parse_matchers(
+        self, *args: str, **kwargs: "str | re.Pattern | typing.List[str]"
+    ) -> typing.Dict[str, str]:
+        return {
+            self.extract_label(arg): arg for arg in args  # fmt: skip
+        } | {
+            self.check_label(label): (
+                "" if expr is None
+                else f'{label}=~"{"|".join(expr)}"' if isinstance(expr, list)
+                else f'{label}=~"{expr.pattern}"' if isinstance(expr, re.Pattern)
+                else f'{label}="{expr}"'  # fmt: skip
+            )
             for label, expr in kwargs.items()
         }
 
@@ -61,7 +72,7 @@ class Metric(MetricMetadata):
 
     def __call__(self, *args: str, **kwargs: str) -> str:
         matchers = self.default_labels | self.parse_matchers(*args, **kwargs)
-        selector = ", ".join([expr for _, expr in matchers.items()])
+        selector = ", ".join([expr for _, expr in matchers.items() if expr])
         return self.name + "{" + selector + "}"
 
 
