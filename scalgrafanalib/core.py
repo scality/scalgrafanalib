@@ -1,9 +1,8 @@
-from typing import Any, Dict, List, TypeVar, Union
+from typing import Any, Dict, List, Union, Optional
 import attr
 from grafanalib import core  # type: ignore
 
 Json = Dict[str, Any]
-Self = TypeVar("Self")
 
 
 @attr.s
@@ -50,18 +49,51 @@ class PieChart(core.PieChartv2):
 
 
 @attr.s
-class Stat(core.Stat):
-    """Stat: Allow settings minValue and maxValue"""
+class Stat(core.Stat):  # pylint: disable=too-many-instance-attributes
+    """Stat: Allow settings minValue and maxValue, plus accept 'unit' as alias for 'format'"""
 
     minValue = attr.ib(default=None)  # pylint: disable=invalid-name
     maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
+    # alias: Grafanalib 0.7 uses 'format', our older code used 'unit'
+    unit = attr.ib(default=None, metadata={"alias": "format"})
+    # Advanced options for version panel and others
+    reduceOptions = attr.ib(default=None)  # pylint: disable=invalid-name
+    graphMode = attr.ib(default=None)  # pylint: disable=invalid-name
+    justifyMode = attr.ib(default=None)  # pylint: disable=invalid-name
+    textSize = attr.ib(default=None)  # pylint: disable=invalid-name
+    wideLayout = attr.ib(default=None)  # pylint: disable=invalid-name
+
+    def __attrs_post_init__(self):  # type: ignore
+        # Map unit -> format if provided
+        if self.unit is not None:
+            # 'format' attribute is defined in parent via attrs; set it
+            setattr(self, "format", self.unit)
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
-        if self.minValue:
+        if self.minValue is not None:
             json["fieldConfig"]["defaults"]["min"] = self.minValue
-        if self.maxValue:
+        if self.maxValue is not None:
             json["fieldConfig"]["defaults"]["max"] = self.maxValue
+
+        # Ensure options structure exists
+        if "options" not in json:
+            json["options"] = {}
+
+        # Add advanced options
+        if self.reduceOptions is not None:
+            json["options"]["reduceOptions"] = self.reduceOptions
+        if self.graphMode is not None:
+            json["options"]["graphMode"] = self.graphMode
+        if self.justifyMode is not None:
+            json["options"]["justifyMode"] = self.justifyMode
+        if self.wideLayout is not None:
+            json["options"]["wideLayout"] = self.wideLayout
+        if self.textSize is not None:
+            if "text" not in json["options"]:
+                json["options"]["text"] = {}
+            json["options"]["text"]["valueSize"] = self.textSize
+
         return json
 
 
@@ -100,11 +132,36 @@ class StatSpecialMapping:
 
 
 @attr.s
+class StateMapping:
+    """
+    Represents a state mapping for StateTimeline panels with color and text
+    """
+
+    value: Union[int, str, None] = attr.ib()
+    text: str = attr.ib()
+    color: Optional[str] = attr.ib(default=None)
+    index: int = attr.ib(default=0)
+
+    def to_json_data(self) -> Dict[str, Any]:
+        result = {
+            "index": self.index,
+            "text": self.text,
+        }
+        if self.color:
+            result["color"] = self.color
+        return result
+
+
+@attr.s
 class StateTimeline(core.StateTimeline):
-    """StateTimeline: Allow settings minValue and maxValue"""
+    """StateTimeline: Allow settings minValue, maxValue, and color mappings for MongoDB states"""
 
     minValue = attr.ib(default=None)  # pylint: disable=invalid-name
     maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
+    colorMode: str = attr.ib(default="palette-classic")  # pylint: disable=invalid-name
+    mappings: List[Union[StateMapping, Dict[str, Any]]] = attr.ib(
+        default=None
+    )  # pylint: disable=invalid-name
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
@@ -112,6 +169,58 @@ class StateTimeline(core.StateTimeline):
             json["fieldConfig"]["defaults"]["min"] = self.minValue
         if self.maxValue:
             json["fieldConfig"]["defaults"]["max"] = self.maxValue
+
+        # Set color mode
+        if "fieldConfig" not in json:
+            json["fieldConfig"] = {}
+        if "defaults" not in json["fieldConfig"]:
+            json["fieldConfig"]["defaults"] = {}
+        if "color" not in json["fieldConfig"]["defaults"]:
+            json["fieldConfig"]["defaults"]["color"] = {}
+        json["fieldConfig"]["defaults"]["color"]["mode"] = self.colorMode
+
+        # Add mappings if provided
+        if self.mappings:
+            if "mappings" not in json["fieldConfig"]["defaults"]:
+                json["fieldConfig"]["defaults"]["mappings"] = []
+
+            # Create value mapping options
+            value_options = {}
+            for mapping in self.mappings:
+                # Handle both StateMapping objects and dictionaries
+                if isinstance(mapping, StateMapping):
+                    # StateMapping object
+                    key = str(mapping.value) if mapping.value is not None else "null"
+                    value_options[key] = mapping.to_json_data()
+                else:
+                    # Dictionary - convert to StateMapping format
+                    value = mapping.get("value")
+                    key = str(value) if value is not None else "null"
+                    result = {
+                        "index": mapping.get("index", 0),
+                        "text": mapping.get("text", ""),
+                    }
+                    if mapping.get("color"):
+                        result["color"] = mapping["color"]
+                    value_options[key] = result
+
+            # Add the value mapping
+            json["fieldConfig"]["defaults"]["mappings"].append(
+                {"type": "value", "options": value_options}
+            )
+
+            # Add range mapping for N/A values
+            json["fieldConfig"]["defaults"]["mappings"].append(
+                {
+                    "type": "range",
+                    "options": {
+                        "from": 0,
+                        "to": 1,
+                        "result": {"index": 0, "text": "N/A"},
+                    },
+                }
+            )
+
         return json
 
 
@@ -139,15 +248,27 @@ class Target(core.Target):
 
 @attr.s
 class TimeSeries(core.TimeSeries):
-    """TimeSeries: Allow settings decimals & legend values"""
+    """TimeSeries: Allow settings decimals & legend values and backward-compat for showLegend"""
 
     decimals: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
     legendValues: List[str] = attr.ib(  # pylint: disable=invalid-name
         default=[], validator=attr.validators.instance_of(list)
     )
-    spanNulls: Union[int, bool] = attr.ib(  # pylint: disable=invalid-name
+    spanNulls: Union[int, bool] = attr.ib(
         default=False, validator=attr.validators.instance_of((int, bool))
     )
+    showLegend: bool = attr.ib(  # pylint: disable=invalid-name
+        default=True, validator=attr.validators.instance_of(bool)
+    )
+
+    minValue = attr.ib(default=None)  # pylint: disable=invalid-name
+    maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
+
+    def __attrs_post_init__(self):  # type: ignore
+        # If showLegend is False, hide legend via legendDisplayMode
+        if not self.showLegend:
+            # legendDisplayMode is an attribute on parent class
+            setattr(self, "legendDisplayMode", "hidden")
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
@@ -155,6 +276,10 @@ class TimeSeries(core.TimeSeries):
             json["options"]["decimals"] = self.decimals
         if self.legendValues:
             json["options"]["legend"]["calcs"] = self.legendValues
+        if self.minValue is not None:
+            json["fieldConfig"]["defaults"]["min"] = self.minValue
+        if self.maxValue is not None:
+            json["fieldConfig"]["defaults"]["max"] = self.maxValue
         return json
 
 
@@ -173,7 +298,7 @@ class Dashboard(core.Dashboard):
         # we kind of use (uid)
         return json
 
-    def verify_datasources(self) -> Self:
+    def verify_datasources(self) -> "Dashboard":
         datasources = {
             "${" + input.name + "}"
             for input in self.inputs
@@ -185,3 +310,13 @@ class Dashboard(core.Dashboard):
             else:
                 assert panel.dataSource in datasources
         return self
+
+
+@attr.s
+class RawPanel(core.Panel):
+    """Wrap an existing panel JSON for passthrough."""
+
+    rawJson: dict = attr.ib(kw_only=True, factory=dict)  # pylint: disable=invalid-name
+
+    def to_json_data(self):  # type: ignore
+        return self.rawJson
