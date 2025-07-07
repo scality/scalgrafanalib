@@ -41,7 +41,7 @@ setup(
     ],
     install_requires=[
         "attrs>=15.2.0",
-        "grafanalib==0.6.3",
+        "grafanalib>=0.7.1",
     ],
     extras_require={
         "dev": [
