@@ -1,10 +1,8 @@
-from typing import Any, Dict, List, Union, Optional, TypeVar
-
-Self = TypeVar("Self", bound="Dashboard")
-
+from typing import Any, Dict, List, TypeVar
 import attr
 from grafanalib import core  # type: ignore
 
+Self = TypeVar("Self", bound="Dashboard")
 Json = Dict[str, Any]
 
 
@@ -121,35 +119,11 @@ class StatSpecialMapping:
 
 
 @attr.s
-class StateMapping:
-    """
-    Represents a state mapping for StateTimeline panels with color and text
-    """
-
-    value: Union[int, str, None] = attr.ib()
-    text: str = attr.ib()
-    color: Optional[str] = attr.ib(default=None)
-    index: int = attr.ib(default=0)
-
-    def to_json_data(self) -> Dict[str, Any]:
-        result = {
-            "index": self.index,
-            "text": self.text,
-        }
-        if self.color:
-            result["color"] = self.color
-        return result
-
-
-@attr.s
 class StateTimeline(core.StateTimeline):
     """StateTimeline: Allow settings minValue, maxValue, and color mappings"""
 
     minValue = attr.ib(default=None)  # pylint: disable=invalid-name
     maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
-    mappings: List[Union[StateMapping, Dict[str, Any]]] = attr.ib(
-        default=None
-    )  # pylint: disable=invalid-name
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
@@ -157,33 +131,6 @@ class StateTimeline(core.StateTimeline):
             json["fieldConfig"]["defaults"]["min"] = self.minValue
         if self.maxValue:
             json["fieldConfig"]["defaults"]["max"] = self.maxValue
-
-        # Add mappings if provided
-        if self.mappings:
-            # Create value mapping options
-            value_options = {}
-            for mapping in self.mappings:
-                # Handle both StateMapping objects and dictionaries for backward compatibility
-                if isinstance(mapping, StateMapping):
-                    # StateMapping object
-                    key = str(mapping.value) if mapping.value is not None else "null"
-                    value_options[key] = mapping.to_json_data()
-                else:
-                    # Dictionary - convert to StateMapping format
-                    value = mapping.get("value")
-                    key = str(value) if value is not None else "null"
-                    result = {
-                        "index": mapping.get("index", 0),
-                        "text": mapping.get("text", ""),
-                    }
-                    if mapping.get("color"):
-                        result["color"] = mapping["color"]
-                    value_options[key] = result
-
-            # Add the value mapping
-            json["fieldConfig"]["defaults"]["mappings"].append(
-                {"type": "value", "options": value_options}
-            )
 
         return json
 
