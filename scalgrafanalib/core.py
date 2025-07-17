@@ -2,7 +2,8 @@ from typing import Any, Dict, List, TypeVar
 import attr
 from grafanalib import core  # type: ignore
 
-Self = TypeVar("Self", bound="Dashboard")
+Self = TypeVar("Self")
+
 Json = Dict[str, Any]
 
 
@@ -120,7 +121,7 @@ class StatSpecialMapping:
 
 @attr.s
 class StateTimeline(core.StateTimeline):
-    """StateTimeline: Allow settings minValue, maxValue, and color mappings"""
+    """StateTimeline: Allow settings minValue and maxValue"""
 
     minValue = attr.ib(default=None)  # pylint: disable=invalid-name
     maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
@@ -159,14 +160,12 @@ class Target(core.Target):
 
 @attr.s
 class TimeSeries(core.TimeSeries):
-    """TimeSeries: Allow settings decimals, legend values, and min/max values"""
+    """TimeSeries: Allow settings decimals & legend values"""
 
     decimals: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
     legendValues: List[str] = attr.ib(  # pylint: disable=invalid-name
         default=[], validator=attr.validators.instance_of(list)
     )
-    minValue = attr.ib(default=None)  # pylint: disable=invalid-name
-    maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
@@ -174,10 +173,6 @@ class TimeSeries(core.TimeSeries):
             json["options"]["decimals"] = self.decimals
         if self.legendValues:
             json["options"]["legend"]["calcs"] = self.legendValues
-        if self.minValue is not None:
-            json["fieldConfig"]["defaults"]["min"] = self.minValue
-        if self.maxValue is not None:
-            json["fieldConfig"]["defaults"]["max"] = self.maxValue
         return json
 
 
@@ -196,7 +191,7 @@ class Dashboard(core.Dashboard):
         # we kind of use (uid)
         return json
 
-    def verify_datasources(self: Self) -> Self:
+    def verify_datasources(self) -> Self:
         datasources = {
             "${" + input.name + "}"
             for input in self.inputs
