@@ -1,9 +1,10 @@
-from typing import Any, Dict, List, TypeVar, Union
+from typing import Any, Dict, List, TypeVar
 import attr
 from grafanalib import core  # type: ignore
 
-Json = Dict[str, Any]
 Self = TypeVar("Self")
+
+Json = Dict[str, Any]
 
 
 @attr.s
@@ -50,18 +51,30 @@ class PieChart(core.PieChartv2):
 
 
 @attr.s
-class Stat(core.Stat):
+class Stat(core.Stat):  # pylint: disable=too-many-instance-attributes
     """Stat: Allow settings minValue and maxValue"""
 
     minValue = attr.ib(default=None)  # pylint: disable=invalid-name
     maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
+    # Advanced options for version panel and others
+    textSize = attr.ib(default=None)  # pylint: disable=invalid-name
+    wideLayout = attr.ib(default=None)  # pylint: disable=invalid-name
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
-        if self.minValue:
+        if self.minValue is not None:
             json["fieldConfig"]["defaults"]["min"] = self.minValue
-        if self.maxValue:
+        if self.maxValue is not None:
             json["fieldConfig"]["defaults"]["max"] = self.maxValue
+
+        # Add advanced options
+        if self.wideLayout is not None:
+            json["options"]["wideLayout"] = self.wideLayout
+        if self.textSize is not None:
+            if "text" not in json["options"]:
+                json["options"]["text"] = {}
+            json["options"]["text"]["valueSize"] = self.textSize
+
         return json
 
 
@@ -112,6 +125,7 @@ class StateTimeline(core.StateTimeline):
             json["fieldConfig"]["defaults"]["min"] = self.minValue
         if self.maxValue:
             json["fieldConfig"]["defaults"]["max"] = self.maxValue
+
         return json
 
 
@@ -129,6 +143,7 @@ class Tooltip(core.Tooltip):
         return {"show": self.show, "showHistogram": self.showHistogram}
 
 
+@attr.s
 class Target(core.Target):
     """Target: set default `intervalFactor` mode to 1"""
 
@@ -144,9 +159,6 @@ class TimeSeries(core.TimeSeries):
     decimals: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
     legendValues: List[str] = attr.ib(  # pylint: disable=invalid-name
         default=[], validator=attr.validators.instance_of(list)
-    )
-    spanNulls: Union[int, bool] = attr.ib(  # pylint: disable=invalid-name
-        default=False, validator=attr.validators.instance_of((int, bool))
     )
 
     def to_json_data(self) -> Json:
