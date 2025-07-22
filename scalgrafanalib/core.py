@@ -57,7 +57,6 @@ class Stat(core.Stat):  # pylint: disable=too-many-instance-attributes
     minValue = attr.ib(default=None)  # pylint: disable=invalid-name
     maxValue = attr.ib(default=None)  # pylint: disable=invalid-name
     # Advanced options for version panel and others
-    reduceOptions = attr.ib(default=None)  # pylint: disable=invalid-name
     textSize = attr.ib(default=None)  # pylint: disable=invalid-name
     wideLayout = attr.ib(default=None)  # pylint: disable=invalid-name
 
@@ -68,13 +67,7 @@ class Stat(core.Stat):  # pylint: disable=too-many-instance-attributes
         if self.maxValue is not None:
             json["fieldConfig"]["defaults"]["max"] = self.maxValue
 
-        # Ensure options structure exists
-        if "options" not in json:
-            json["options"] = {}
-
         # Add advanced options
-        if self.reduceOptions is not None:
-            json["options"]["reduceOptions"] = self.reduceOptions
         if self.wideLayout is not None:
             json["options"]["wideLayout"] = self.wideLayout
         if self.textSize is not None:
@@ -150,6 +143,7 @@ class Tooltip(core.Tooltip):
         return {"show": self.show, "showHistogram": self.showHistogram}
 
 
+@attr.s
 class Target(core.Target):
     """Target: set default `intervalFactor` mode to 1"""
 
