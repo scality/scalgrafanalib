@@ -59,6 +59,7 @@ class Stat(core.Stat):  # pylint: disable=too-many-instance-attributes
     # Advanced options for version panel and others
     textSize = attr.ib(default=None)  # pylint: disable=invalid-name
     wideLayout = attr.ib(default=None)  # pylint: disable=invalid-name
+    reduceOptions = attr.ib(default=None)  # pylint: disable=invalid-name
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
@@ -74,6 +75,11 @@ class Stat(core.Stat):  # pylint: disable=too-many-instance-attributes
             if "text" not in json["options"]:
                 json["options"]["text"] = {}
             json["options"]["text"]["valueSize"] = self.textSize
+
+        # Reduce options allows to specify the "Fields"
+        # and calculation method.
+        if self.reduceOptions is not None:
+            json["options"]["reduceOptions"] = self.reduceOptions
 
         return json
 
