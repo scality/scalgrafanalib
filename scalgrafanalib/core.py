@@ -2,7 +2,7 @@ from typing import Any, Dict, List, TypeVar
 import attr
 from grafanalib import core  # type: ignore
 
-Self = TypeVar("Self")
+Self = TypeVar("Self", bound="Dashboard")
 
 Json = Dict[str, Any]
 
@@ -191,7 +191,7 @@ class Dashboard(core.Dashboard):
         # we kind of use (uid)
         return json
 
-    def verify_datasources(self) -> Self:
+    def verify_datasources(self: Self) -> Self:
         datasources = {
             "${" + input.name + "}"
             for input in self.inputs
