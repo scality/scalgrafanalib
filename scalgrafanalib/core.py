@@ -1,8 +1,8 @@
-from typing import Any, Dict, List, TypeVar
+from typing import Any, Dict, List, TypeVar, Union
 import attr
 from grafanalib import core  # type: ignore
 
-Self = TypeVar("Self")
+Self = TypeVar("Self", bound="Dashboard")
 
 Json = Dict[str, Any]
 
@@ -166,6 +166,11 @@ class TimeSeries(core.TimeSeries):
     legendValues: List[str] = attr.ib(  # pylint: disable=invalid-name
         default=[], validator=attr.validators.instance_of(list)
     )
+    # Grafana accepts either a boolean or a gap threshold in milliseconds, but
+    # grafanalib validates this field as a bool only.
+    spanNulls: Union[int, bool] = attr.ib(  # pylint: disable=invalid-name
+        default=False, validator=attr.validators.instance_of((int, bool))
+    )
 
     def to_json_data(self) -> Json:
         json = super().to_json_data()
@@ -191,7 +196,7 @@ class Dashboard(core.Dashboard):
         # we kind of use (uid)
         return json
 
-    def verify_datasources(self) -> Self:
+    def verify_datasources(self: Self) -> Self:
         datasources = {
             "${" + input.name + "}"
             for input in self.inputs

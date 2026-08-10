@@ -15,7 +15,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="1.2.1",
+    version="1.2.2",
     description="Library for building Grafana dashboards at scality",
     long_description=DESCRIPTION,
     url="https://github.com/scality/scalgrafanalib",
@@ -46,7 +46,7 @@ setup(
     extras_require={
         "dev": [
             "black==22.3.0",
-            "mypy==0.931",
+            "mypy>=2.3.0",
             "pylint==2.12.2",
             "pytest==7.1.3",
             "types-setuptools",
