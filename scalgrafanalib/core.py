@@ -166,6 +166,8 @@ class TimeSeries(core.TimeSeries):
     legendValues: List[str] = attr.ib(  # pylint: disable=invalid-name
         default=[], validator=attr.validators.instance_of(list)
     )
+    # Grafana accepts either a boolean or a gap threshold in milliseconds, but
+    # grafanalib validates this field as a bool only.
     spanNulls: Union[int, bool] = attr.ib(  # pylint: disable=invalid-name
         default=False, validator=attr.validators.instance_of((int, bool))
     )
